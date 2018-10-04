@@ -59,7 +59,7 @@ void  gen_hilbert(Matrix H);
 void  write_vec(FILE *fid, char *name, const double *vec, int n);
 double tictoc (int n);
 
-#define N        12
+#define N   12
 
 /*************************************************************
  *
@@ -158,42 +158,39 @@ void  write_vec(FILE *fid, char *name, const double *vec, int n) {
  *
  * Check the orthogonality of a given unitary matrix.
  *************************************************************/
+//Calculate digit accuracy -log10(|| I - Q'*Q||F)
 
 double check_orthogonality(const Matrix Q) {
     double sqnrm=0.0;
     int n=Q.m, i,j,k;
 
-   // double result=0.0;
-
     Matrix resultMatrix = allocate_matrix(n,n);
+
+    //Calculate Q'*Q
+
+    double sum=0;
+    for ( i = 0; i < n; i++){
+        for (j = 0; j < n; j++){
+            
+            sum=0;
+            for ( k = 0; k < n; k++){
+               sum = sum + Q.vals[k][i] * Q.vals[k][j] ;
+            }
+            resultMatrix.vals[i][j] = sum;
+
+        }
+    }
 
     /* Compute the Frobenius norm of I-Q'*Q */
     for (i=0; i<n; ++i) {
         for (j=0; j<n; ++j) {
             /* FIXME */
-
-        	for ( k = 0; k < n ; ++k)
-        	{
-        		/* code */
-        		resultMatrix.vals[i][j] =  resultMatrix.vals[i][j] + Q.vals[k][i]* Q.vals[k][j];
-        	}
-
-
-
-        	if ( i == j )
-        	{
-        		/* code */
+        	if ( i == j ){
         		sqnrm = sqnrm + (1 - resultMatrix.vals[i][j]) * (1- resultMatrix.vals[i][j]) ;
-
         	}
-        	else
-        	{
+        	else{
         		sqnrm = sqnrm + resultMatrix.vals[i][j] * resultMatrix.vals[i][j] ;
-        	}
-
-        	//result = 0 ;
-
-
+        	}	
         }
     }
 	
@@ -249,26 +246,18 @@ void  cgs(Matrix Q, Matrix R, const Matrix A) {
 
         for (i = 0; i < j; ++i) {
             
-
             /* R(i,j) = Q(:, i)' * A(:, j); */
-            /* FIXME */
 
-        	for ( k = 0; k < n; ++k)
-        	{
-        		/* code */
+        	for ( k = 0; k < n; ++k){
         		result = result + Q.vals[k][i]*A.vals[k][j] ;
         	}
 
         	R.vals[i][j] = result ;
-
-        	result=0;
+            result=0;
 
             /* v = v - R(i, j) * Q(:,i); */
-            /* FIXME */
 
-        	for (int k = 0; k < n; ++k)
-        	{
-        		/* code */
+        	for (int k = 0; k < n; ++k){
         		v[k] = v[k] - R.vals[i][j]*Q.vals[k][i];
         	}
 
@@ -276,11 +265,9 @@ void  cgs(Matrix Q, Matrix R, const Matrix A) {
         }
 
         /* R(j, j) = norm(v, 2); */
-        /* FIXME */
-
+       
         result = 0 ;
-        for ( k = 0; k < n; ++k)
-        {
+        for ( k = 0; k < n; ++k) {
         	result = result + v[k]*v[k] ;
         }
 
