@@ -33,18 +33,18 @@
  */
 
 typedef struct {
-    double** vals;
+    float** vals;
     int m;
     int n;
 } Matrix;
 
 typedef struct {
-    double*  vals;
+    float*  vals;
     int m;
 } Vector;
 
 /* Prototypes for local functions. You need to implement these functions. */
-double check_orthogonality(const Matrix Q);
+float check_orthogonality(const Matrix Q);
 void  dgs(Matrix Q, Matrix R, const Matrix A);
 void  cgs(Matrix Q, Matrix R, const Matrix A);
 void  mgs(Matrix Q, Matrix R, const Matrix A);
@@ -56,8 +56,8 @@ void   deallocate_matrix( Matrix);
 void   deallocate_vector( Vector);
 
 void  gen_hilbert(Matrix H);
-void  write_vec(FILE *fid, char *name, const double *vec, int n);
-double tictoc (int n);
+void  write_vec(FILE *fid, char *name, const float *vec, int n);
+float tictoc (int n);
 
 #define N   12
 
@@ -69,18 +69,21 @@ double tictoc (int n);
  *************************************************************/
 
 int main(int argc, char **argv) {
-    Matrix R, H, Q;
-    double digits_cgs[N], digits_mgs[N], digits_dgs[N], times_cgs[N], times_mgs[N];
-    double times_dgs[N];
+    Matrix R, H, Q, CheckH;
+    float digits_cgs[N], digits_mgs[N], digits_dgs[N], times_cgs[N], times_mgs[N];
+    float times_dgs[N];
     int i, j;
     FILE *fid;
-    int niter = 10000;
+    //int niter = 10000;
 
     H = allocate_matrix(N, N);
     Q = allocate_matrix(N, N);
     R = allocate_matrix(N, N);
+
+    CheckH = allocate_matrix(N,N) ;
    
     for (i=2; i<=N; ++i) {
+
         /* Use first i rows and first i columns of H, Q, and R */
         H.m = H.n = Q.m = Q.n = R.m = R.n = i;
 
@@ -88,40 +91,100 @@ int main(int argc, char **argv) {
         gen_hilbert(H);
         /*%%%%%%%%%%%%%%%%%% Run classical Gram-Schmidt */
 
+        //Print H matrix
+
+        /* print the matrix H  */
+        printf("H = \n");
+        for(int k = 0; k< i; k++) {
+            for(int l = 0; l < i; l++) {
+
+                printf("%9.6g ", H.vals[k][l]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+
         tictoc(1);
-        for (j=0; j<niter; ++j) {
-            /* Repeat for many times for more accurate timing */
-            cgs(Q, R, H);
+
+    
+        cgs(Q, R, H);
+
+         /* print the matrix H  */
+        printf("Q = \n");
+        for(int k = 0; k< i; k++) {
+            for(int l = 0; l < i; l++) {
+
+                printf("%9.6g ", Q.vals[k][l]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+
+         /* print the matrix H  */
+        printf("R = \n");
+        for(int k = 0; k< i; k++) {
+            for(int l = 0; l < i; l++) {
+
+                printf("%9.6g ", R.vals[k][l]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+        
+        //Lets Check if Q*R = H ????
+        float sumM=0;
+
+        for ( int k = 0; k < i; k++){
+            for (int l = 0; l < i; l++){
+                sumM =0 ;
+                for ( int m = 0; m < i; m++){
+                    sumM = sumM + Q.vals[k][m]*R.vals[m][l] ;
+                }
+                CheckH.vals[k][l] = sumM;
+            }
         }
 
-        times_cgs[i - 2] =  tictoc(2) / niter;
+        /* print the matrix CheckH  */
+        printf("CheckH = \n");
+        for(int k = 0; k< i; k++) {
+            for(int l = 0; l < i; l++) {
+
+                printf("%9.6g ", CheckH.vals[k][l]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+
+        times_cgs[i - 2] =  tictoc(2) ;
         digits_cgs[i - 2] = check_orthogonality(Q);
         /*%%%%%%%%%%%%%%%%%% Run modified Gram-Schmidt */
 
         tictoc(1);
 
-        for (j=0; j<niter; ++j) {
-            /* Repeat for many times for more accurate timing */
-            mgs(Q, R, H);
-        }
+        /* Repeat for many times for more accurate timing */
+        mgs(Q, R, H);
+        
 	   
-        times_mgs[i - 2] =  tictoc(2) / niter;
+        times_mgs[i - 2] =  tictoc(2) ;
         digits_mgs[i - 2] = check_orthogonality(Q);
-        /*%%%%%%%%%%%%%%%%%% Run double Gram-Schmidt */
+        /*%%%%%%%%%%%%%%%%%% Run float Gram-Schmidt */
 
         tictoc(1);
-        for (j=0; j<niter; ++j) {
-            /* Repeat for many times for more accurate timing */
+       
 
-            dgs(Q, R, H);
-        }
-        times_dgs[i - 2] =  tictoc(2) / niter;
+        dgs(Q, R, H);
+        
+        times_dgs[i - 2] =  tictoc(2) ;
         digits_dgs[i - 2] = check_orthogonality(Q);
     }
 
     deallocate_matrix(H);
     deallocate_matrix(Q);
     deallocate_matrix(R);
+    deallocate_matrix(CheckH) ;
 
     /* Write out results into a Matlab file */
     fid = fopen("results.m", "w");
@@ -142,7 +205,7 @@ int main(int argc, char **argv) {
  * Write out a vector into file
  *************************************************************/
 
-void  write_vec(FILE *fid, char *name, const double *vec, int n) {
+void  write_vec(FILE *fid, char *name, const float *vec, int n) {
     int i;
 
     fprintf(fid, "%s=[", name);
@@ -160,15 +223,15 @@ void  write_vec(FILE *fid, char *name, const double *vec, int n) {
  *************************************************************/
 //Calculate digit accuracy -log10(|| I - Q'*Q||F)
 
-double check_orthogonality(const Matrix Q) {
-    double sqnrm=0.0;
+float check_orthogonality(const Matrix Q) {
+    float sqnrm=0.0;
     int n=Q.m, i,j,k;
 
     Matrix resultMatrix = allocate_matrix(n,n);
 
     //Calculate Q'*Q
 
-    double sum=0;
+    float sum=0;
     for ( i = 0; i < n; i++){
         for (j = 0; j < n; j++){
             
@@ -184,6 +247,7 @@ double check_orthogonality(const Matrix Q) {
     /* Compute the Frobenius norm of I-Q'*Q */
     for (i=0; i<n; ++i) {
         for (j=0; j<n; ++j) {
+            
             /* FIXME */
         	if ( i == j ){
         		sqnrm = sqnrm + (1 - resultMatrix.vals[i][j]) * (1- resultMatrix.vals[i][j]) ;
@@ -202,7 +266,7 @@ double check_orthogonality(const Matrix Q) {
  *
  * FUNCTION: dgs
  *
- * Double Classical Gram-Schdmit Algorithm
+ * float Classical Gram-Schdmit Algorithm
  *************************************************************/
 
 void  dgs(Matrix Q, Matrix R, const Matrix A) {
@@ -233,9 +297,9 @@ void  dgs(Matrix Q, Matrix R, const Matrix A) {
 void  cgs(Matrix Q, Matrix R, const Matrix A) {
 
     int n=A.m, i,j,k;
-    double v[N];
+    float v[N];
 
-    double result=0;
+    float result=0;
 
     for (j=0; j<n; ++j) {
         /* v = A(:,j); */
@@ -289,7 +353,7 @@ void  cgs(Matrix Q, Matrix R, const Matrix A) {
 
 void  mgs(Matrix Q, Matrix R, Matrix A) {
     int n=A.m, i,j,k;
-    double result=0;
+    float result=0;
 
     /* Q = A; */
     for (i = 0; i < n; ++i)
@@ -361,12 +425,12 @@ void  gen_hilbert(Matrix H) {
  */
 Matrix allocate_matrix(int m, int n) {
     Matrix A;
-    double *ptmp;
+    float *ptmp;
     int i;
 
     A.m = m; A.n = n;
-    ptmp = (double *)malloc( sizeof(double) * m * n);
-    A.vals = (double **)malloc( sizeof(double **) * m);
+    ptmp = (float *)malloc( sizeof(float) * m * n);
+    A.vals = (float **)malloc( sizeof(float **) * m);
 
     for (i=0; i<m; ++i) {
         A.vals[i] = ptmp + i*n;
@@ -391,7 +455,7 @@ Vector allocate_vector( int m) {
     Vector x;
 
     x.m = m;
-    x.vals = (double *)malloc( sizeof(double) * m);
+    x.vals = (float *)malloc( sizeof(float) * m);
     return x;
 }
 
@@ -408,9 +472,9 @@ void deallocate_vector( Vector x) {
 /*-----------------------------------------------------------------------------
  * FUNCTION: tictoc - Initialize (1) or get (2) the elapsed time since in seconds
  * --------------------------------------------------------------------------*/
-double tictoc (int n)
+float tictoc (int n)
 {
-    double    y = 0.0;
+    float    y = 0.0;
     static    struct timeval start_time, end_time; 
 
     if (n == 1) { 
